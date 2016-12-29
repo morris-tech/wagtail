@@ -1,7 +1,13 @@
-{% load gravatar %}
+{% load avatar %}
 
-<span class="avatar small icon icon-user">
-    <img src="{% gravatar_url user.email 25 %}" />
-</span>
+<div class="avatar {% if small %} small{% endif %}{% if square %} square{% endif %}{% if dark %} avatar-on-dark{% endif %} icon icon-user">
+    {% block avatar_image %}
+        {% if user.email %}
+            <img src="{% gravatar_url user.email gravatar_size %}" />
+        {% endif %}
+    {% endblock %}
+</div>
 
-{{ user }}
+{% if show_user %}
+    {{ user }}
+{% endif %}

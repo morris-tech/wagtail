@@ -6,6 +6,8 @@ from django.core.urlresolvers import reverse
 from django.db.models import Count
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template import Template
+from django.template.context import Context
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.http import is_safe_url, urlquote
@@ -1036,7 +1038,14 @@ def revisions_revert(request, page_id, revision_id):
     form = form_class(instance=revision_page)
     edit_handler = edit_handler_class(instance=revision_page, form=form)
 
-    user_avatar = render_to_string('wagtailadmin/shared/user_avatar.html', {'user': revision.user})
+    template = Template(
+        """
+        {% load avatar %}
+        {% user_avatar user small=True show_user=True %}
+        """
+    )
+    context = Context({'user': revision.user})
+    user_avatar = template.render(context)
 
     messages.warning(request, mark_safe(
         _("You are viewing a previous revision of this page from <b>%(created_at)s</b> by %(user)s") % {

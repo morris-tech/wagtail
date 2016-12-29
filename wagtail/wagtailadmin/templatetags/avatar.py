@@ -1,6 +1,6 @@
 # place inside a 'templatetags' directory inside the top level of a Django app (not project, must be inside an app)
 # at the top of your page template include this:
-# {% load gravatar %}
+# {% load avatar %}
 # and to use the url do this:
 # <img src="{% gravatar_url 'someone@somewhere.com' %}">
 # or
@@ -18,18 +18,19 @@ register = template.Library()
 
 
 class GravatarUrlNode(template.Node):
-    def __init__(self, email, size=50):
+    def __init__(self, email, size='50'):
         self.email = template.Variable(email)
-        self.size = size
+        self.size = template.Variable(size)
 
     def render(self, context):
         try:
             email = self.email.resolve(context)
+            size = self.size.resolve(context)
         except template.VariableDoesNotExist:
             return ''
 
         default = "blank"
-        size = int(self.size) * 2  # requested at retina size by default and scaled down at point of use with css
+        size = int(size) * 2  # requested at retina size by default and scaled down at point of use with css
 
         gravatar_url = "//www.gravatar.com/avatar/{hash}?{params}".format(
             hash=hashlib.md5(email.lower().encode('utf-8')).hexdigest(),
@@ -37,6 +38,23 @@ class GravatarUrlNode(template.Node):
         )
 
         return gravatar_url
+
+
+@register.inclusion_tag("wagtailadmin/shared/user_avatar.html", takes_context=False)
+def user_avatar(user, small=False, square=False, dark=False, show_user=False):
+    if small:
+        gravatar_size = 25
+    else:
+        gravatar_size = 50
+
+    return {
+        'user': user,
+        'small': small,
+        'square': square,
+        'dark': dark,
+        'gravatar_size': gravatar_size,
+        'show_user': show_user
+    }
 
 
 @register.tag
