@@ -1,9 +1,13 @@
+from __future__ import absolute_import, unicode_literals
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
 from django.db.models import Q
 from django.utils.functional import cached_property
+
+from wagtail.utils.compat import user_is_authenticated
 
 
 class BasePermissionPolicy(object):
@@ -147,10 +151,10 @@ class AuthenticationOnlyPermissionPolicy(BasePermissionPolicy):
     full permission over the given model
     """
     def user_has_permission(self, user, action):
-        return user.is_authenticated() and user.is_active
+        return user_is_authenticated(user) and user.is_active
 
     def user_has_any_permission(self, user, actions):
-        return user.is_authenticated() and user.is_active
+        return user_is_authenticated(user) and user.is_active
 
     def users_with_any_permission(self, actions):
         return get_user_model().objects.filter(is_active=True)

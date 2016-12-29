@@ -15,7 +15,7 @@
     {% include "wagtailadmin/shared/header.html" with title=editing_str subtitle=group.name icon="group" %}
 
     <div class="nice-padding">
-        <form action="{% url 'wagtailusers_groups:edit' group.id %}" method="POST">
+        <form action="{% url 'wagtailusers_groups:edit' group.id %}" method="POST" novalidate>
             {% csrf_token %}
 
             <ul class="fields">
@@ -30,7 +30,7 @@
                     </li>
                 {% endfor %}
                 <li>
-                    <input type="submit" value="{% trans 'Save' %}" />
+                    <input type="submit" value="{% trans 'Save' %}" class="button" />
 
                     {% if perms.auth.delete_group %}
                         <a href="{% url 'wagtailusers_groups:delete' group.id %}" class="button button-secondary no">{% trans "Delete group" %}</a>

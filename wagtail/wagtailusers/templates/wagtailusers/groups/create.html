@@ -15,7 +15,7 @@
     {% include "wagtailadmin/shared/header.html" with title=add_group_str icon="group" %}
 
     <div class="nice-padding">
-        <form action="{% url 'wagtailusers_groups:add' %}" method="POST">
+        <form action="{% url 'wagtailusers_groups:add' %}" method="POST" novalidate>
             {% csrf_token %}
 
             <ul class="fields">
@@ -28,7 +28,7 @@
                         {{ panel.as_admin_panel }}
                     </li>
                 {% endfor %}
-                <li><input type="submit" value='{% trans "Add group" %}' /></li>
+                <li><input type="submit" value='{% trans "Add group" %}' class="button" /></li>
             </ul>
         </form>
     </div>

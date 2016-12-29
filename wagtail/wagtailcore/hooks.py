@@ -1,3 +1,5 @@
+from __future__ import absolute_import, unicode_literals
+
 from wagtail.utils.apps import get_app_submodules
 
 _hooks = {}
@@ -28,6 +30,7 @@ def register(hook_name, fn=None):
     if hook_name not in _hooks:
         _hooks[hook_name] = []
     _hooks[hook_name].append(fn)
+
 
 _searched_for_hooks = False
 

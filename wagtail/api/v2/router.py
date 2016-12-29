@@ -1,3 +1,5 @@
+from __future__ import absolute_import, unicode_literals
+
 import functools
 
 from django.conf.urls import include, url
@@ -27,6 +29,20 @@ class WagtailAPIRouter(object):
         for name, class_ in self._endpoints.items():
             if issubclass(model, class_.model):
                 return name, class_
+
+    def get_model_listing_urlpath(self, model):
+        """
+        Returns a URL path (excluding scheme and hostname) to the listing
+        page of a model
+
+        Returns None if the model is not represented by any endpoints.
+        """
+        endpoint = self.get_model_endpoint(model)
+
+        if endpoint:
+            endpoint_name, endpoint_class = endpoint[0], endpoint[1]
+            url_namespace = self.url_namespace + ':' + endpoint_name
+            return endpoint_class.get_model_listing_urlpath(model, namespace=url_namespace)
 
     def get_object_detail_urlpath(self, model, pk):
         """

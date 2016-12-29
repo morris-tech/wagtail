@@ -1,3 +1,5 @@
+from __future__ import absolute_import, unicode_literals
+
 import os
 
 from django.core.urlresolvers import NoReverseMatch, reverse
@@ -9,14 +11,16 @@ from django.views.decorators.vary import vary_on_headers
 from wagtail.utils.pagination import paginate
 from wagtail.wagtailadmin import messages
 from wagtail.wagtailadmin.forms import SearchForm
-from wagtail.wagtailadmin.utils import PermissionPolicyChecker, permission_denied
+from wagtail.wagtailadmin.utils import (
+    PermissionPolicyChecker, permission_denied, popular_tags_for_model)
 from wagtail.wagtailcore.models import Collection, Site
+from wagtail.wagtailimages import get_image_model
 from wagtail.wagtailimages.exceptions import InvalidFilterSpecError
 from wagtail.wagtailimages.forms import URLGeneratorForm, get_image_form
-from wagtail.wagtailimages.models import Filter, get_image_model
+from wagtail.wagtailimages.models import Filter
 from wagtail.wagtailimages.permissions import permission_policy
-from wagtail.wagtailimages.utils import generate_signature
-from wagtail.wagtailsearch.backends import get_search_backends
+from wagtail.wagtailimages.views.serve import generate_signature
+from wagtail.wagtailsearch import index as search_index
 
 permission_checker = PermissionPolicyChecker(permission_policy)
 
@@ -74,7 +78,7 @@ def index(request):
             'is_searching': bool(query_string),
 
             'search_form': form,
-            'popular_tags': Image.popular_tags(),
+            'popular_tags': popular_tags_for_model(Image),
             'collections': collections,
             'current_collection': current_collection,
             'user_can_add': permission_policy.user_has_permission(request.user, 'add'),
@@ -91,7 +95,7 @@ def edit(request, image_id):
     if not permission_policy.user_has_permission_for_instance(request.user, 'change', image):
         return permission_denied(request)
 
-    if request.POST:
+    if request.method == 'POST':
         original_file = image.file
         form = ImageForm(request.POST, request.FILES, instance=image, user=request.user)
         if form.is_valid():
@@ -108,8 +112,7 @@ def edit(request, image_id):
             form.save()
 
             # Reindex the image to make sure all tags are indexed
-            for backend in get_search_backends():
-                backend.add(image)
+            search_index.insert_or_update_object(image)
 
             messages.success(request, _("Image '{0}' updated.").format(image.title), buttons=[
                 messages.button(reverse('wagtailimages:edit', args=(image.id,)), _('Edit again'))
@@ -224,7 +227,7 @@ def delete(request, image_id):
     if not permission_policy.user_has_permission_for_instance(request.user, 'delete', image):
         return permission_denied(request)
 
-    if request.POST:
+    if request.method == 'POST':
         image.delete()
         messages.success(request, _("Image '{0}' deleted.").format(image.title))
         return redirect('wagtailimages:index')
@@ -239,7 +242,7 @@ def add(request):
     ImageModel = get_image_model()
     ImageForm = get_image_form(ImageModel)
 
-    if request.POST:
+    if request.method == 'POST':
         image = ImageModel(uploaded_by_user=request.user)
         form = ImageForm(request.POST, request.FILES, instance=image, user=request.user)
         if form.is_valid():
@@ -249,8 +252,7 @@ def add(request):
             form.save()
 
             # Reindex the image to make sure all tags are indexed
-            for backend in get_search_backends():
-                backend.add(image)
+            search_index.insert_or_update_object(image)
 
             messages.success(request, _("Image '{0}' added.").format(image.title), buttons=[
                 messages.button(reverse('wagtailimages:edit', args=(image.id,)), _('Edit'))

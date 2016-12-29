@@ -1,3 +1,5 @@
+from __future__ import absolute_import, unicode_literals
+
 from datetime import timedelta
 
 from django.core import management
@@ -128,6 +130,17 @@ class TestMovePagesCommand(TestCase):
         # Check that all pages moved
         for page_id in page_ids:
             self.assertEqual(Page.objects.get(id=page_id).get_parent(), about_us)
+
+
+class TestSetUrlPathsCommand(TestCase):
+
+    fixtures = ['test.json']
+
+    def run_command(self):
+        management.call_command('set_url_paths', interactive=False, stdout=StringIO())
+
+    def test_set_url_paths(self):
+        self.run_command()
 
 
 class TestReplaceTextCommand(TestCase):

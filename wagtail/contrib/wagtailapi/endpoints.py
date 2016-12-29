@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 from collections import OrderedDict
 
@@ -12,8 +12,8 @@ from rest_framework.viewsets import GenericViewSet
 
 from wagtail.wagtailcore.models import Page
 from wagtail.wagtailcore.utils import resolve_model_string
-from wagtail.wagtaildocs.models import Document
-from wagtail.wagtailimages.models import get_image_model
+from wagtail.wagtaildocs.models import get_document_model
+from wagtail.wagtailimages import get_image_model
 
 from .filters import ChildOfFilter, DescendantOfFilter, FieldsFilter, OrderingFilter, SearchFilter
 from .pagination import WagtailPagination
@@ -239,4 +239,4 @@ class DocumentsAPIEndpoint(BaseAPIEndpoint):
     filter_backends = [FieldsFilter, OrderingFilter, SearchFilter]
     extra_api_fields = ['title', 'tags']
     name = 'documents'
-    model = Document
+    model = get_document_model()

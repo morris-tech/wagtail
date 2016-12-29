@@ -50,14 +50,14 @@ Hooks for building new areas of the admin interface (alongside pages, images, do
     from wagtail.wagtailcore import hooks
 
     class WelcomePanel(object):
-      order = 50
+        order = 50
 
-      def render(self):
-        return mark_safe("""
-        <section class="panel summary nice-padding">
-          <h3>No, but seriously -- welcome to the admin homepage.</h3>
-        </section>
-        """)
+        def render(self):
+            return mark_safe("""
+            <section class="panel summary nice-padding">
+              <h3>No, but seriously -- welcome to the admin homepage.</h3>
+            </section>
+            """)
 
     @hooks.register('construct_homepage_panels')
     def add_another_welcome_panel(request, panels):
@@ -68,8 +68,6 @@ Hooks for building new areas of the admin interface (alongside pages, images, do
 
 ``construct_homepage_summary_items``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-  .. versionadded:: 1.0
 
   Add or remove items from the 'site summary' bar on the admin homepage (which shows the number of pages and other object that exist on the site). The callable passed into this hook should take a ``request`` object and a list of ``SummaryItem`` objects to be modified as required. These objects have a ``render()`` method, which returns an HTML string, and an ``order`` property, which is an integer that specifies the order in which the items will appear.
 
@@ -207,7 +205,7 @@ Hooks for building new areas of the admin interface (alongside pages, images, do
 
     @hooks.register('register_admin_search_area')
     def register_frank_search_area():
-      return SearchArea('Frank', reverse('frank'), classnames='icon icon-folder-inverse', order=10000)
+        return SearchArea('Frank', reverse('frank'), classnames='icon icon-folder-inverse', order=10000)
 
 
 .. _register_permissions:
@@ -215,7 +213,36 @@ Hooks for building new areas of the admin interface (alongside pages, images, do
 ``register_permissions``
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-  Return a queryset of Permission objects to be shown in the Groups administration area.
+  Return a queryset of ``Permission`` objects to be shown in the Groups administration area.
+
+
+.. _filter_form_submissions_for_user:
+
+``filter_form_submissions_for_user``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Allows access to form submissions to be customised on a per-user, per-form basis.
+
+  This hook takes two parameters:
+   - The user attempting to access form submissions
+   - A ``QuerySet`` of form pages
+
+  The hook must return a ``QuerySet`` containing a subset of these form pages which the user is allowed to access the submissions for.
+
+  For example, to prevent non-superusers from accessing form submissions:
+
+  .. code-block:: python
+
+    from wagtail.wagtailcore import hooks
+
+
+    @hooks.register('filter_form_submissions_for_user')
+    def construct_forms_for_user(user, queryset):
+        if not user.is_superuser:
+            queryset = queryset.none()
+
+        return queryset
+
 
 
 Editor interface
@@ -257,16 +284,17 @@ Hooks for customising the editing interface for pages and snippets.
 
   .. code-block:: python
 
+    from django.contrib.staticfiles.templatetags.staticfiles import static
     from django.utils.html import format_html
-    from django.conf import settings
 
     from wagtail.wagtailcore import hooks
 
     @hooks.register('insert_editor_css')
     def editor_css():
-      return format_html('<link rel="stylesheet" href="' \
-      + settings.STATIC_URL \
-      + 'demo/css/vendor/font-awesome/css/font-awesome.min.css">')
+        return format_html(
+            '<link rel="stylesheet" href="{}">',
+            static('demo/css/vendor/font-awesome/css/font-awesome.min.css')
+        )
 
 
 .. _insert_global_admin_css:
@@ -274,20 +302,18 @@ Hooks for customising the editing interface for pages and snippets.
 ``insert_global_admin_css``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Add additional CSS files or snippets to all admin pages.
+  Add additional CSS files or snippets to all admin pages.
 
-.. code-block:: python
+  .. code-block:: python
 
-  from django.utils.html import format_html
-  from django.conf import settings
+    from django.utils.html import format_html
+    from django.contrib.staticfiles.templatetags.staticfiles import static
 
-  from wagtail.wagtailcore import hooks
+    from wagtail.wagtailcore import hooks
 
-  @hooks.register('insert_global_admin_css')
-  def global_admin_css():
-    return format_html('<link rel="stylesheet" href="' \
-    + settings.STATIC_URL \
-    + 'my/wagtail/theme.css">')
+    @hooks.register('insert_global_admin_css')
+    def global_admin_css():
+        return format_html('<link rel="stylesheet" href="{}">', static('my/wagtail/theme.css'))
 
 
 .. _insert_editor_js:
@@ -306,19 +332,19 @@ Add additional CSS files or snippets to all admin pages.
 
     @hooks.register('insert_editor_js')
     def editor_js():
-      js_files = [
-        'demo/js/hallo-plugins/hallo-demo-plugin.js',
-      ]
-      js_includes = format_html_join('\n', '<script src="{0}{1}"></script>',
-        ((settings.STATIC_URL, filename) for filename in js_files)
-      )
-      return js_includes + format_html(
-        """
-        <script>
-          registerHalloPlugin('demoeditor');
-        </script>
-        """
-      )
+        js_files = [
+            'demo/js/hallo-plugins/hallo-demo-plugin.js',
+        ]
+        js_includes = format_html_join('\n', '<script src="{0}{1}"></script>',
+            ((settings.STATIC_URL, filename) for filename in js_files)
+        )
+        return js_includes + format_html(
+            """
+            <script>
+                registerHalloPlugin('demoeditor');
+            </script>
+            """
+        )
 
 
 .. _insert_global_admin_js:
@@ -336,9 +362,9 @@ Add additional CSS files or snippets to all admin pages.
 
     @hooks.register('insert_global_admin_js')
     def global_admin_js():
-      return format_html('<script src="' \
-      + 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r74/three.js' \
-      + '"></script>')
+        return format_html(
+            '<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r74/three.js"></script>',
+        )
 
 
 Editor workflow
@@ -362,8 +388,34 @@ Hooks for customising the way users are directed through the process of creating
 
     @hooks.register('after_create_page')
     def do_after_page_create(request, page):
-      return HttpResponse("Congrats on making content!", content_type="text/plain")
+        return HttpResponse("Congrats on making content!", content_type="text/plain")
 
+
+.. _before_create_page:
+
+``before_create_page``
+~~~~~~~~~~~~~~~~~~~~~~
+
+  Called at the beginning of the "create page" view passing in the request, the parent page and page model class.
+
+  The function does not have to return anything, but if an object with a ``status_code`` property is returned, Wagtail will use it as a response object and skip the rest of the view.
+
+  Unlike, ``after_create_page``, this is run both for both ``GET`` and ``POST`` requests.
+
+  This can be used to completely override the editor on a per-view basis:
+
+  .. code-block:: python
+
+    from wagtail.wagtailcore import hooks
+
+    from .models import AwesomePage
+    from .admin_views import edit_awesome_page
+
+    @hooks.register('before_create_page')
+    def before_create_page(request, parent_page, page_class):
+        # Use a custom create view for the AwesomePage model
+        if page_class == AwesomePage:
+            return create_awesome_page(request, parent_page)
 
 .. _after_delete_page:
 
@@ -371,6 +423,16 @@ Hooks for customising the way users are directed through the process of creating
 ~~~~~~~~~~~~~~~~~~~~~
 
   Do something after a ``Page`` object is deleted. Uses the same behavior as ``after_create_page``.
+
+
+.. _before_delete_page:
+
+``before_delete_page``
+~~~~~~~~~~~~~~~~~~~~~~
+
+  Called at the beginning of the "delete page" view passing in the request and the page object.
+
+  Uses the same behavior as ``before_create_page``.
 
 
 .. _after_edit_page:
@@ -381,14 +443,24 @@ Hooks for customising the way users are directed through the process of creating
   Do something with a ``Page`` object after it has been updated. Uses the same behavior as ``after_create_page``.
 
 
+.. _before_edit_page:
+
+``before_edit_page``
+~~~~~~~~~~~~~~~~~~~~~
+
+  Called at the beginning of the "edit page" view passing in the request and the page object.
+
+  Uses the same behavior as ``before_create_page``.
+
+
 .. _construct_wagtail_userbar:
 
 ``construct_wagtail_userbar``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. versionchanged:: 1.0
+  .. versionchanged:: 1.0
 
-   The hook was renamed from ``construct_wagtail_edit_bird``
+    The hook was renamed from ``construct_wagtail_edit_bird``
 
   Add or remove items from the wagtail userbar. Add, edit, and moderation tools are provided by default. The callable passed into the hook must take the ``request`` object and a list of menu objects, ``items``. The menu item objects must have a ``render`` method which can take a ``request`` object and return the HTML string representing the menu item. See the userbar templates and menu item classes for more information.
 
@@ -397,13 +469,13 @@ Hooks for customising the way users are directed through the process of creating
     from wagtail.wagtailcore import hooks
 
     class UserbarPuppyLinkItem(object):
-      def render(self, request):
-        return '<li><a href="http://cuteoverload.com/tag/puppehs/" ' \
-        + 'target="_parent" class="action icon icon-wagtail">Puppies!</a></li>'
+        def render(self, request):
+            return '<li><a href="http://cuteoverload.com/tag/puppehs/" ' \
+                + 'target="_parent" class="action icon icon-wagtail">Puppies!</a></li>'
 
     @hooks.register('construct_wagtail_userbar')
     def add_puppy_link_item(request, items):
-      return items.append( UserbarPuppyLinkItem() )
+        return items.append( UserbarPuppyLinkItem() )
 
 
 Page explorer
@@ -422,11 +494,11 @@ Page explorer
 
     @hooks.register('construct_explorer_page_queryset')
     def show_my_profile_only(parent_page, pages, request):
-      # If we're in the 'user-profiles' section, only show the user's own profile
-      if parent_page.slug == 'user-profiles':
-        pages = pages.filter(owner=request.user)
+        # If we're in the 'user-profiles' section, only show the user's own profile
+        if parent_page.slug == 'user-profiles':
+            pages = pages.filter(owner=request.user)
 
-      return pages
+        return pages
 
 
 .. _register_page_listing_buttons:

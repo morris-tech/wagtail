@@ -1,3 +1,5 @@
+from __future__ import absolute_import, unicode_literals
+
 import json
 
 import mock
@@ -6,7 +8,7 @@ from django.test import TestCase
 from django.test.utils import override_settings
 
 from wagtail.api.v2 import signal_handlers
-from wagtail.wagtaildocs.models import Document
+from wagtail.wagtaildocs.models import get_document_model
 
 
 class TestDocumentListing(TestCase):
@@ -37,7 +39,7 @@ class TestDocumentListing(TestCase):
         # Check that the total count is there and correct
         self.assertIn('total_count', content['meta'])
         self.assertIsInstance(content['meta']['total_count'], int)
-        self.assertEqual(content['meta']['total_count'], Document.objects.count())
+        self.assertEqual(content['meta']['total_count'], get_document_model().objects.count())
 
         # Check that the items section is there
         self.assertIn('items', content)
@@ -75,7 +77,52 @@ class TestDocumentListing(TestCase):
 
         for document in content['items']:
             self.assertEqual(set(document.keys()), {'id', 'meta', 'title'})
-            self.assertEqual(set(document['meta'].keys()), {'type', 'detail_url', 'download_url'})
+            self.assertEqual(set(document['meta'].keys()), {'type', 'detail_url', 'download_url', 'tags'})
+
+    def test_remove_fields(self):
+        response = self.get_response(fields='-title')
+        content = json.loads(response.content.decode('UTF-8'))
+
+        for document in content['items']:
+            self.assertEqual(set(document.keys()), {'id', 'meta'})
+
+    def test_remove_meta_fields(self):
+        response = self.get_response(fields='-download_url')
+        content = json.loads(response.content.decode('UTF-8'))
+
+        for document in content['items']:
+            self.assertEqual(set(document.keys()), {'id', 'meta', 'title'})
+            self.assertEqual(set(document['meta'].keys()), {'type', 'detail_url', 'tags'})
+
+    def test_remove_all_meta_fields(self):
+        response = self.get_response(fields='-type,-detail_url,-tags,-download_url')
+        content = json.loads(response.content.decode('UTF-8'))
+
+        for document in content['items']:
+            self.assertEqual(set(document.keys()), {'id', 'title'})
+
+    def test_remove_id_field(self):
+        response = self.get_response(fields='-id')
+        content = json.loads(response.content.decode('UTF-8'))
+
+        for document in content['items']:
+            self.assertEqual(set(document.keys()), {'meta', 'title'})
+
+    def test_all_fields(self):
+        response = self.get_response(fields='*')
+        content = json.loads(response.content.decode('UTF-8'))
+
+        for document in content['items']:
+            self.assertEqual(set(document.keys()), {'id', 'meta', 'title'})
+            self.assertEqual(set(document['meta'].keys()), {'type', 'detail_url', 'tags', 'download_url'})
+
+    def test_all_fields_then_remove_something(self):
+        response = self.get_response(fields='*,-title,-download_url')
+        content = json.loads(response.content.decode('UTF-8'))
+
+        for document in content['items']:
+            self.assertEqual(set(document.keys()), {'id', 'meta'})
+            self.assertEqual(set(document['meta'].keys()), {'type', 'detail_url', 'tags'})
 
     def test_fields_tags(self):
         response = self.get_response(fields='tags')
@@ -83,6 +130,13 @@ class TestDocumentListing(TestCase):
 
         for document in content['items']:
             self.assertIsInstance(document['meta']['tags'], list)
+
+    def test_star_in_wrong_position_gives_error(self):
+        response = self.get_response(fields='title,*')
+        content = json.loads(response.content.decode('UTF-8'))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(content, {'message': "fields error: '*' must be in the first position"})
 
     def test_fields_which_are_not_in_api_fields_gives_error(self):
         response = self.get_response(fields='uploaded_by_user')
@@ -93,6 +147,13 @@ class TestDocumentListing(TestCase):
 
     def test_fields_unknown_field_gives_error(self):
         response = self.get_response(fields='123,title,abc')
+        content = json.loads(response.content.decode('UTF-8'))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(content, {'message': "unknown fields: 123, abc"})
+
+    def test_fields_remove_unknown_field_gives_error(self):
+        response = self.get_response(fields='-123,-title,-abc')
         content = json.loads(response.content.decode('UTF-8'))
 
         self.assertEqual(response.status_code, 400)
@@ -116,7 +177,7 @@ class TestDocumentListing(TestCase):
         self.assertEqual(document_id_list, [10])
 
     def test_filtering_tags(self):
-        Document.objects.get(id=3).tags.add('test')
+        get_document_model().objects.get(id=3).tags.add('test')
 
         response = self.get_response(tags='test')
         content = json.loads(response.content.decode('UTF-8'))
@@ -194,7 +255,7 @@ class TestDocumentListing(TestCase):
         content = json.loads(response.content.decode('UTF-8'))
 
         # The total count must not be affected by "limit"
-        self.assertEqual(content['meta']['total_count'], Document.objects.count())
+        self.assertEqual(content['meta']['total_count'], get_document_model().objects.count())
 
     def test_limit_not_integer_gives_error(self):
         response = self.get_response(limit='abc')
@@ -247,7 +308,7 @@ class TestDocumentListing(TestCase):
         content = json.loads(response.content.decode('UTF-8'))
 
         # The total count must not be affected by "offset"
-        self.assertEqual(content['meta']['total_count'], Document.objects.count())
+        self.assertEqual(content['meta']['total_count'], get_document_model().objects.count())
 
     def test_offset_not_integer_gives_error(self):
         response = self.get_response(offset='abc')
@@ -267,12 +328,13 @@ class TestDocumentListing(TestCase):
 
         self.assertEqual(set(document_id_list), set([2]))
 
-    def test_search_when_ordering_gives_error(self):
+    def test_search_with_order(self):
         response = self.get_response(search='james', order='title')
         content = json.loads(response.content.decode('UTF-8'))
 
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(content, {'message': "ordering with a search query is not supported"})
+        document_id_list = self.get_document_id_list(content)
+
+        self.assertEqual(document_id_list, [2])
 
     @override_settings(WAGTAILAPI_SEARCH_ENABLED=False)
     def test_search_when_disabled_gives_error(self):
@@ -334,8 +396,8 @@ class TestDocumentDetail(TestCase):
         self.assertEqual(content['meta']['tags'], [])
 
     def test_tags(self):
-        Document.objects.get(id=1).tags.add('hello')
-        Document.objects.get(id=1).tags.add('world')
+        get_document_model().objects.get(id=1).tags.add('hello')
+        get_document_model().objects.get(id=1).tags.add('world')
 
         response = self.get_response(1)
         content = json.loads(response.content.decode('UTF-8'))
@@ -350,6 +412,71 @@ class TestDocumentDetail(TestCase):
 
         self.assertIn('download_url', content['meta'])
         self.assertEqual(content['meta']['download_url'], 'http://api.example.com/documents/1/wagtail_by_markyharky.jpg')
+
+    # FIELDS
+
+    def test_remove_fields(self):
+        response = self.get_response(2, fields='-title')
+        content = json.loads(response.content.decode('UTF-8'))
+
+        self.assertIn('id', set(content.keys()))
+        self.assertNotIn('title', set(content.keys()))
+
+    def test_remove_meta_fields(self):
+        response = self.get_response(2, fields='-download_url')
+        content = json.loads(response.content.decode('UTF-8'))
+
+        self.assertIn('detail_url', set(content['meta'].keys()))
+        self.assertNotIn('download_url', set(content['meta'].keys()))
+
+    def test_remove_id_field(self):
+        response = self.get_response(2, fields='-id')
+        content = json.loads(response.content.decode('UTF-8'))
+
+        self.assertIn('title', set(content.keys()))
+        self.assertNotIn('id', set(content.keys()))
+
+    def test_remove_all_fields(self):
+        response = self.get_response(2, fields='_,id,type')
+        content = json.loads(response.content.decode('UTF-8'))
+
+        self.assertEqual(set(content.keys()), {'id', 'meta'})
+        self.assertEqual(set(content['meta'].keys()), {'type'})
+
+    def test_star_in_wrong_position_gives_error(self):
+        response = self.get_response(2, fields='title,*')
+        content = json.loads(response.content.decode('UTF-8'))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(content, {'message': "fields error: '*' must be in the first position"})
+
+    def test_fields_which_are_not_in_api_fields_gives_error(self):
+        response = self.get_response(2, fields='path')
+        content = json.loads(response.content.decode('UTF-8'))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(content, {'message': "unknown fields: path"})
+
+    def test_fields_unknown_field_gives_error(self):
+        response = self.get_response(2, fields='123,title,abc')
+        content = json.loads(response.content.decode('UTF-8'))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(content, {'message': "unknown fields: 123, abc"})
+
+    def test_fields_remove_unknown_field_gives_error(self):
+        response = self.get_response(2, fields='-123,-title,-abc')
+        content = json.loads(response.content.decode('UTF-8'))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(content, {'message': "unknown fields: 123, abc"})
+
+    def test_nested_fields_on_non_relational_field_gives_error(self):
+        response = self.get_response(2, fields='title(foo,bar)')
+        content = json.loads(response.content.decode('UTF-8'))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(content, {'message': "'title' does not support nested fields"})
 
 
 @override_settings(
@@ -376,11 +503,11 @@ class TestDocumentCacheInvalidation(TestCase):
         signal_handlers.unregister_signal_handlers()
 
     def test_resave_document_purges(self, purge):
-        Document.objects.get(id=5).save()
+        get_document_model().objects.get(id=5).save()
 
         purge.assert_any_call('http://api.example.com/api/v2beta/documents/5/')
 
     def test_delete_document_purges(self, purge):
-        Document.objects.get(id=5).delete()
+        get_document_model().objects.get(id=5).delete()
 
         purge.assert_any_call('http://api.example.com/api/v2beta/documents/5/')

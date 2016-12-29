@@ -9,9 +9,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Wagtail\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-03-09 13:55+0000\n"
-"PO-Revision-Date: 2016-03-09 13:58+0000\n"
-"Last-Translator: mattwestcott <matthew@torchbox.com>\n"
+"POT-Creation-Date: 2016-12-06 22:44+0000\n"
+"PO-Revision-Date: 2016-12-06 22:46+0000\n"
+"Last-Translator: Matt Westcott <matthew@torchbox.com>\n"
 "Language-Team: Japanese (http://www.transifex.com/torchbox/wagtail/language/"
 "ja/)\n"
 "MIME-Version: 1.0\n"
@@ -112,12 +112,6 @@ msgid ""
 "This slug is already in use within the context of its parent page \"%s\""
 msgstr "このスラッグ（\"%s\"）は親ページで既に使用されています。"
 
-msgid "Public"
-msgstr "公開"
-
-msgid "Private, accessible with the following password"
-msgstr "限定公開（次のパスワードによりアクセス可能）"
-
 msgid "This field is required."
 msgstr "この項目は必須です"
 
@@ -191,9 +185,6 @@ msgstr "メールを確認"
 
 msgid "A link to reset your password has been emailed to you."
 msgstr "パスワードを再設定するリンクがあなたのメールアドレスに送信されました。"
-
-msgid "Please follow the link below to reset your password"
-msgstr "下記のリンクに従ってパスワードを再設定してください。"
 
 msgid "Password reset"
 msgstr "パスワードが再設定されました"
@@ -434,6 +425,9 @@ msgstr "ロックなし"
 msgid "Privacy"
 msgstr "公開設定"
 
+msgid "Public"
+msgstr "公開"
+
 msgid "Private"
 msgstr "非公開"
 
@@ -471,19 +465,6 @@ msgid_plural ""
 msgstr[0] ""
 "\n"
 "この操作により%(descendant_count)s個のサブページが削除されます。"
-
-msgid ""
-"Alternatively you can unpublish the page. This removes the page from public "
-"view and you can edit or publish it again later."
-msgstr ""
-"別の選択肢として、このページを非公開に変更することができます。非公開に設定さ"
-"れたページはのちに編集、再度公開することが可能です。"
-
-msgid "Delete it"
-msgstr "削除する"
-
-msgid "Unpublish it"
-msgstr "非公開に設定"
 
 #, python-format
 msgid "Move %(title)s"
@@ -666,16 +647,6 @@ msgstr "%(title)sに子ページを追加"
 msgid "Add subpage"
 msgstr "サブページを追加"
 
-msgid ""
-"This page is published but does not exist within a configured Site, so "
-"cannot be viewed."
-msgstr ""
-"このページは公開されていますが設定変更後のサイトに存在ないために閲覧できませ"
-"ん。"
-
-msgid "Add child page"
-msgstr "子ページを追加"
-
 #, python-format
 msgid ""
 "\n"
@@ -823,9 +794,6 @@ msgstr ""
 "ています。 <a href=\"http://browsehappy.com/\">ブラウザを更新</a>してくださ"
 "い。."
 
-msgid "Javascript is required to use Wagtail, but it is currently disabled"
-msgstr "Wagtailの使用にはJavascriptが必要ですが、ただいま無効です。"
-
 msgid "Go to Wagtail admin interface"
 msgstr "Wagtailの管理者インターフェースに移動"
 
@@ -916,6 +884,9 @@ msgstr "ページ：'{0}' のロックが解除されました。"
 
 msgid "Pages"
 msgstr "ページ"
+
+msgid "Add child page"
+msgstr "子ページを追加"
 
 msgid "Choose an item"
 msgstr "アイテムを選択"

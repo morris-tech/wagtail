@@ -45,38 +45,38 @@ function initTagField(id, autocompleteUrl) {
  *  - formSelector - A CSS selector to select the form to apply this check to.
  *
  *  - options - An object for passing in options. Possible options are:
- *    - ignoredButtonsSelector - A CSS selector to find buttons to ignore within
- *      the form. If the navigation was triggered by one of these buttons, The
- *      check will be ignored. defaults to: input[type="submit"].
  *    - confirmationMessage - The message to display in the prompt.
  *    - alwaysDirty - When set to true the form will always be considered dirty,
  *      prompting the user even when nothing has been changed.
 */
+
+var dirtyFormCheckIsActive = true;
+
 function enableDirtyFormCheck(formSelector, options) {
     var $form = $(formSelector);
-    var $ignoredButtons = $form.find(
-        options.ignoredButtonsSelector || 'input[type="submit"],button[type="submit"]'
-    );
     var confirmationMessage = options.confirmationMessage || ' ';
     var alwaysDirty = options.alwaysDirty || false;
     var initialData = $form.serialize();
+    var formSubmitted = false;
+
+    $($form).submit(function() {
+        formSubmitted = true;
+    });
 
     window.addEventListener('beforeunload', function(event) {
-        // Ignore if the user clicked on an ignored element
-        var triggeredByIgnoredButton = false;
-        var $trigger = $(event.target.activeElement);
+        var displayConfirmation = (
+            dirtyFormCheckIsActive && !formSubmitted && (alwaysDirty || $form.serialize() != initialData)
+        );
 
-        $ignoredButtons.each(function() {
-            if ($(this).is($trigger)) {
-                triggeredByIgnoredButton = true;
-            }
-        });
-
-        if (!triggeredByIgnoredButton && (alwaysDirty || $form.serialize() != initialData)) {
+        if (displayConfirmation) {
             event.returnValue = confirmationMessage;
             return confirmationMessage;
         }
     });
+}
+
+function disableDirtyFormCheck() {
+    dirtyFormCheckIsActive = false;
 }
 
 $(function() {
@@ -93,12 +93,18 @@ $(function() {
         }
     });
 
+    // Enable toggle to open/close user settings
+    $(document).on('click', '#account-settings', function() {
+        $('#footer').toggleClass('footer-open');
+        $(this).find('em').toggleClass('icon-arrow-down-after icon-arrow-up-after');
+    });
+
     // Resize nav to fit height of window. This is an unimportant bell/whistle to make it look nice
     var fitNav = function() {
         $('.nav-wrapper').css('min-height', $(window).height());
         $('.nav-main').each(function() {
             var thisHeight = $(this).height();
-            var footerHeight = $('.footer', $(this)).height();
+            var footerHeight = $('#footer', $(this)).height();
         });
     };
 
@@ -214,7 +220,22 @@ $(function() {
         var $self = $(this);
         var $replacementElem = $('em', $self);
         var reEnableAfter = 30;
-        var dataName = 'disabledtimeout'
+        var dataName = 'disabledtimeout';
+
+        window.cancelSpinner = function() {
+            $self.prop('disabled', '').removeData(dataName).removeClass('button-longrunning-active');
+
+            if ($self.data('clicked-text')) {
+                $replacementElem.text($self.data('original-text'));
+            }
+        };
+
+        // If client-side validation is active on this form, and is going to block submission of the
+        // form, don't activate the spinner
+        var form = $self.closest('form').get(0);
+        if (form && form.checkValidity && !form.noValidate && (!form.checkValidity())) {
+            return;
+        }
 
         // Disabling a button prevents it submitting the form, so disabling
         // must occur on a brief timeout only after this function returns.
@@ -226,11 +247,7 @@ $(function() {
                 $self.data(dataName, setTimeout(function() {
                     clearTimeout($self.data(dataName));
 
-                    $self.prop('disabled', '').removeData(dataName).removeClass('button-longrunning-active')
-
-                    if ($self.data('clicked-text')) {
-                        $replacementElem.text($self.data('original-text'));
-                    }
+                    cancelSpinner();
 
                 }, reEnableAfter * 1000));
 
@@ -315,7 +332,7 @@ wagtail = (function(document, window, wagtail) {
             return this._dropDowns;
         },
 
-        getByIndex(index) {
+        getByIndex: function(index) {
             return this._dropDowns[index];
         },
 
@@ -457,6 +474,3 @@ wagtail = (function(document, window, wagtail) {
     return wagtail;
 
 })(document, window, wagtail);
-
-
-

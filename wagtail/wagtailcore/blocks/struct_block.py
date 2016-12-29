@@ -19,11 +19,6 @@ __all__ = ['BaseStructBlock', 'StructBlock', 'StructValue']
 
 
 class BaseStructBlock(Block):
-    class Meta:
-        default = {}
-        template = "wagtailadmin/blocks/struct.html"
-        form_classname = 'struct-block'
-        form_template = 'wagtailadmin/block_forms/struct.html'
 
     def __init__(self, local_blocks=None, **kwargs):
         self._constructor_kwargs = kwargs
@@ -64,7 +59,7 @@ class BaseStructBlock(Block):
     def media(self):
         return forms.Media(js=[static('wagtailadmin/js/blocks/struct.js')])
 
-    def render_form(self, value, prefix='', errors=None):
+    def get_form_context(self, value, prefix='', errors=None):
         if errors:
             if len(errors) > 1:
                 # We rely on StructBlock.clean throwing a single ValidationError with a specially crafted
@@ -83,17 +78,30 @@ class BaseStructBlock(Block):
             for name, block in self.child_blocks.items()
         ])
 
-        return render_to_string(self.meta.form_template, {
+        return {
             'children': bound_child_blocks,
             'help_text': getattr(self.meta, 'help_text', None),
             'classname': self.meta.form_classname,
-        })
+            'block_definition': self,
+            'prefix': prefix,
+        }
+
+    def render_form(self, value, prefix='', errors=None):
+        context = self.get_form_context(value, prefix=prefix, errors=errors)
+
+        return render_to_string(self.meta.form_template, context)
 
     def value_from_datadict(self, data, files, prefix):
         return StructValue(self, [
             (name, block.value_from_datadict(data, files, '%s-%s' % (prefix, name)))
             for name, block in self.child_blocks.items()
         ])
+
+    def value_omitted_from_data(self, data, files, prefix):
+        return all(
+            block.value_omitted_from_data(data, files, '%s-%s' % (prefix, name))
+            for name, block in self.child_blocks.items()
+        )
 
     def clean(self, value):
         result = []  # build up a list of (name, value) tuples to be passed to the StructValue constructor
@@ -160,6 +168,16 @@ class BaseStructBlock(Block):
 
         return errors
 
+    class Meta:
+        default = {}
+        template = "wagtailadmin/blocks/struct.html"
+        form_classname = 'struct-block'
+        form_template = 'wagtailadmin/block_forms/struct.html'
+        # No icon specified here, because that depends on the purpose that the
+        # block is being used for. Feel encouraged to specify an icon in your
+        # descendant block type
+        icon = "placeholder"
+
 
 class StructBlock(six.with_metaclass(DeclarativeSubBlocksMetaclass, BaseStructBlock)):
     pass
@@ -173,6 +191,9 @@ class StructValue(collections.OrderedDict):
 
     def __str__(self):
         return self.block.render(self)
+
+    def render_as_block(self, context=None):
+        return self.block.render(self, context=context)
 
     @cached_property
     def bound_blocks(self):

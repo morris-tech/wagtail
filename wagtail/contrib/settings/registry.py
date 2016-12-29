@@ -1,3 +1,5 @@
+from __future__ import absolute_import, unicode_literals
+
 from django.apps import apps
 from django.contrib.auth.models import Permission
 from django.core.urlresolvers import reverse
@@ -77,6 +79,7 @@ class Registry(list):
         if Model not in registry:
             return None
         return Model
+
 
 registry = Registry()
 register_setting = registry.register_decorator

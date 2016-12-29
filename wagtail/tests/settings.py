@@ -1,9 +1,15 @@
+from __future__ import absolute_import, unicode_literals
+
 import os
 
-WAGTAIL_ROOT = os.path.dirname(__file__)
-STATIC_ROOT = os.path.join(WAGTAIL_ROOT, 'test-static')
-MEDIA_ROOT = os.path.join(WAGTAIL_ROOT, 'test-media')
+import django
+
+WAGTAIL_ROOT = os.path.dirname(os.path.dirname(__file__))
+STATIC_ROOT = os.path.join(WAGTAIL_ROOT, 'tests', 'test-static')
+MEDIA_ROOT = os.path.join(WAGTAIL_ROOT, 'tests', 'test-media')
 MEDIA_URL = '/media/'
+
+TIME_ZONE = 'Asia/Tokyo'
 
 DATABASES = {
     'default': {
@@ -53,30 +59,47 @@ TEMPLATES = [
     },
     {
         'BACKEND': 'django.template.backends.jinja2.Jinja2',
-        'APP_DIRS': True,
+        'APP_DIRS': False,
+        'DIRS': [
+            os.path.join(WAGTAIL_ROOT, 'tests', 'testapp', 'jinja2_templates'),
+        ],
         'OPTIONS': {
             'extensions': [
                 'wagtail.wagtailcore.jinja2tags.core',
                 'wagtail.wagtailadmin.jinja2tags.userbar',
                 'wagtail.wagtailimages.jinja2tags.images',
+                'wagtail.contrib.settings.jinja2tags.settings',
             ],
         },
     },
 ]
 
-MIDDLEWARE_CLASSES = (
-    'django.middleware.common.CommonMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+if django.VERSION >= (1, 10):
+    MIDDLEWARE = (
+        'django.middleware.common.CommonMiddleware',
+        'django.contrib.sessions.middleware.SessionMiddleware',
+        'django.middleware.csrf.CsrfViewMiddleware',
+        'django.contrib.auth.middleware.AuthenticationMiddleware',
+        'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
+        'django.contrib.messages.middleware.MessageMiddleware',
+        'django.middleware.clickjacking.XFrameOptionsMiddleware',
 
-    'wagtail.wagtailcore.middleware.SiteMiddleware',
+        'wagtail.wagtailcore.middleware.SiteMiddleware',
+        'wagtail.wagtailredirects.middleware.RedirectMiddleware',
+    )
+else:
+    MIDDLEWARE_CLASSES = (
+        'django.middleware.common.CommonMiddleware',
+        'django.contrib.sessions.middleware.SessionMiddleware',
+        'django.middleware.csrf.CsrfViewMiddleware',
+        'django.contrib.auth.middleware.AuthenticationMiddleware',
+        'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
+        'django.contrib.messages.middleware.MessageMiddleware',
+        'django.middleware.clickjacking.XFrameOptionsMiddleware',
 
-    'wagtail.wagtailredirects.middleware.RedirectMiddleware',
-)
+        'wagtail.wagtailcore.middleware.SiteMiddleware',
+        'wagtail.wagtailredirects.middleware.RedirectMiddleware',
+    )
 
 INSTALLED_APPS = (
     # Install wagtailredirects with its appconfig
@@ -90,6 +113,7 @@ INSTALLED_APPS = (
     'wagtail.tests.snippets',
     'wagtail.tests.routablepage',
     'wagtail.tests.search',
+    'wagtail.tests.modeladmintest',
     'wagtail.contrib.wagtailstyleguide',
     'wagtail.contrib.wagtailsitemaps',
     'wagtail.contrib.wagtailroutablepage',
@@ -97,6 +121,8 @@ INSTALLED_APPS = (
     'wagtail.contrib.wagtailapi',
     'wagtail.contrib.wagtailsearchpromotions',
     'wagtail.contrib.settings',
+    'wagtail.contrib.modeladmin',
+    'wagtail.contrib.table_block',
     'wagtail.wagtailforms',
     'wagtail.wagtailsearch',
     'wagtail.wagtailembeds',
@@ -106,7 +132,7 @@ INSTALLED_APPS = (
     'wagtail.wagtailsnippets',
     'wagtail.wagtaildocs',
     'wagtail.wagtailadmin',
-    'wagtail.api',
+    'wagtail.api.v2',
     'wagtail.wagtailcore',
 
     'taggit',
@@ -145,8 +171,15 @@ WAGTAILSEARCH_BACKENDS = {
 AUTH_USER_MODEL = 'customuser.CustomUser'
 
 if 'ELASTICSEARCH_URL' in os.environ:
+    if os.environ.get('ELASTICSEARCH_VERSION') == '5':
+        backend = 'wagtail.wagtailsearch.backends.elasticsearch5'
+    elif os.environ.get('ELASTICSEARCH_VERSION') == '2':
+        backend = 'wagtail.wagtailsearch.backends.elasticsearch2'
+    else:
+        backend = 'wagtail.wagtailsearch.backends.elasticsearch'
+
     WAGTAILSEARCH_BACKENDS['elasticsearch'] = {
-        'BACKEND': 'wagtail.wagtailsearch.backends.elasticsearch',
+        'BACKEND': backend,
         'URLS': [os.environ['ELASTICSEARCH_URL']],
         'TIMEOUT': 10,
         'max_retries': 1,
@@ -155,3 +188,18 @@ if 'ELASTICSEARCH_URL' in os.environ:
 
 
 WAGTAIL_SITE_NAME = "Test Site"
+
+# Extra user field for custom user edit and create form tests. This setting
+# needs to here because it is used at the module level of wagtailusers.forms
+# when the module gets loaded. The decorator 'override_settings' does not work
+# in this scenario.
+WAGTAIL_USER_CUSTOM_FIELDS = ['country', 'attachment']
+
+WAGTAILADMIN_RICH_TEXT_EDITORS = {
+    'default': {
+        'WIDGET': 'wagtail.wagtailadmin.rich_text.HalloRichTextArea'
+    },
+    'custom': {
+        'WIDGET': 'wagtail.tests.testapp.rich_text.CustomRichTextArea'
+    },
+}

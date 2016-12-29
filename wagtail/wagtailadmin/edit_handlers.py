@@ -1,8 +1,10 @@
-from __future__ import unicode_literals
+from __future__ import absolute_import, unicode_literals
+
+import math
+import re
 
 import django
 from django import forms
-from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ImproperlyConfigured
 from django.forms.models import fields_for_model
 from django.template.loader import render_to_string
@@ -247,10 +249,16 @@ class BaseCompositeEditHandler(EditHandler):
     def __init__(self, instance=None, form=None):
         super(BaseCompositeEditHandler, self).__init__(instance=instance, form=form)
 
-        self.children = [
-            handler_class(instance=self.instance, form=self.form)
-            for handler_class in self.__class__.children
-        ]
+        self.children = []
+        for child in self.__class__.children:
+            if not getattr(child, "children", None) and getattr(child, "field_name", None):
+                if self.form._meta.exclude:
+                    if child.field_name in self.form._meta.exclude:
+                        continue
+                if self.form._meta.fields:
+                    if child.field_name not in self.form._meta.fields:
+                        continue
+            self.children.append(child(instance=self.instance, form=self.form))
 
     def render(self):
         return mark_safe(render_to_string(self.template, {
@@ -268,7 +276,7 @@ class BaseFormEditHandler(BaseCompositeEditHandler):
     # edit handler.  Subclasses can override this attribute to provide a form
     # with custom validation, for example.  Custom forms must subclass
     # WagtailAdminModelForm
-    base_form_class = WagtailAdminModelForm
+    base_form_class = None
 
     _form_class = None
 
@@ -279,9 +287,15 @@ class BaseFormEditHandler(BaseCompositeEditHandler):
         the children of this edit handler.
         """
         if cls._form_class is None:
+            # If a custom form class was passed to the EditHandler, use it.
+            # Otherwise, use the base_form_class from the model.
+            # If that is not defined, use WagtailAdminModelForm.
+            model_form_class = getattr(model, 'base_form_class', WagtailAdminModelForm)
+            base_form_class = cls.base_form_class or model_form_class
+
             cls._form_class = get_form_for_model(
                 model,
-                form_class=cls.base_form_class,
+                form_class=base_form_class,
                 fields=cls.required_fields(),
                 formsets=cls.required_formsets(),
                 widgets=cls.widget_overrides())
@@ -293,7 +307,7 @@ class BaseTabbedInterface(BaseFormEditHandler):
 
 
 class TabbedInterface(object):
-    def __init__(self, children, base_form_class=BaseFormEditHandler.base_form_class):
+    def __init__(self, children, base_form_class=None):
         self.children = children
         self.base_form_class = base_form_class
 
@@ -312,7 +326,7 @@ class BaseObjectList(BaseFormEditHandler):
 class ObjectList(object):
 
     def __init__(self, children, heading="", classname="",
-                 base_form_class=BaseFormEditHandler.base_form_class):
+                 base_form_class=None):
         self.children = children
         self.heading = heading
         self.classname = classname
@@ -338,6 +352,14 @@ class FieldRowPanel(object):
         self.classname = classname
 
     def bind_to_model(self, model):
+        col_count = " col" + str(int(math.floor(12 / len(self.children))))
+
+        # If child panel doesn't have a col# class then append default based on
+        # number of columns
+        for child in self.children:
+            if not re.search(r'\bcol\d+\b', child.classname):
+                child.classname += col_count
+
         return type(str('_FieldRowPanel'), (BaseFieldRowPanel,), {
             'model': model,
             'children': [child.bind_to_model(model) for child in self.children],
@@ -478,7 +500,7 @@ class BaseChooserPanel(BaseFieldPanel):
 
     def get_chosen_item(self):
         field = self.instance._meta.get_field(self.field_name)
-        related_model = field.related.model
+        related_model = field.rel.model
         try:
             return getattr(self.instance, self.field_name)
         except related_model.DoesNotExist:
@@ -500,41 +522,36 @@ class BaseChooserPanel(BaseFieldPanel):
 class BasePageChooserPanel(BaseChooserPanel):
     object_type_name = "page"
 
-    _target_content_type = None
-
     @classmethod
     def widget_overrides(cls):
         return {cls.field_name: widgets.AdminPageChooser(
-            content_type=cls.target_content_type(), can_choose_root=cls.can_choose_root)}
+            target_models=cls.target_models(),
+            can_choose_root=cls.can_choose_root)}
 
-    @classmethod
-    def target_content_type(cls):
-        if cls._target_content_type is None:
-            if cls.page_type:
-                target_models = []
+    @cached_classmethod
+    def target_models(cls):
+        if cls.page_type:
+            target_models = []
 
-                for page_type in cls.page_type:
-                    try:
-                        target_models.append(resolve_model_string(page_type))
-                    except LookupError:
-                        raise ImproperlyConfigured(
-                            "{0}.page_type must be of the form 'app_label.model_name', given {1!r}".format(
-                                cls.__name__, page_type
-                            )
+            for page_type in cls.page_type:
+                try:
+                    target_models.append(resolve_model_string(page_type))
+                except LookupError:
+                    raise ImproperlyConfigured(
+                        "{0}.page_type must be of the form 'app_label.model_name', given {1!r}".format(
+                            cls.__name__, page_type
                         )
-                    except ValueError:
-                        raise ImproperlyConfigured(
-                            "{0}.page_type refers to model {1!r} that has not been installed".format(
-                                cls.__name__, page_type
-                            )
+                    )
+                except ValueError:
+                    raise ImproperlyConfigured(
+                        "{0}.page_type refers to model {1!r} that has not been installed".format(
+                            cls.__name__, page_type
                         )
+                    )
 
-                cls._target_content_type = list(ContentType.objects.get_for_models(*target_models).values())
-            else:
-                target_model = cls.model._meta.get_field(cls.field_name).rel.to
-                cls._target_content_type = [ContentType.objects.get_for_model(target_model)]
-
-        return cls._target_content_type
+            return target_models
+        else:
+            return [cls.model._meta.get_field(cls.field_name).rel.to]
 
 
 class PageChooserPanel(object):
@@ -600,6 +617,10 @@ class BaseInlinePanel(EditHandler):
             }
         }
 
+    @classmethod
+    def html_declarations(cls):
+        return cls.get_child_edit_handler_class().html_declarations()
+
     def __init__(self, instance=None, form=None):
         super(BaseInlinePanel, self).__init__(instance=instance, form=form)
 
@@ -651,13 +672,14 @@ class BaseInlinePanel(EditHandler):
 
 
 class InlinePanel(object):
-    def __init__(self, relation_name, panels=None, label='', help_text='', min_num=None, max_num=None):
+    def __init__(self, relation_name, panels=None, classname='', label='', help_text='', min_num=None, max_num=None):
         self.relation_name = relation_name
         self.panels = panels
         self.label = label
         self.help_text = help_text
         self.min_num = min_num
         self.max_num = max_num
+        self.classname = classname
 
     def bind_to_model(self, model):
         if django.VERSION >= (1, 9):
@@ -675,7 +697,8 @@ class InlinePanel(object):
             # TODO: can we pick this out of the foreign key definition as an alternative?
             # (with a bit of help from the inlineformset object, as we do for label/heading)
             'min_num': self.min_num,
-            'max_num': self.max_num
+            'max_num': self.max_num,
+            'classname': self.classname,
         })
 
 

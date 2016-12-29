@@ -1,9 +1,11 @@
+from __future__ import absolute_import, unicode_literals
+
 from django.core.urlresolvers import NoReverseMatch
 from django.test import RequestFactory, TestCase
 
 from wagtail.contrib.wagtailroutablepage.templatetags.wagtailroutablepage_tags import \
     routablepageurl
-from wagtail.tests.routablepage.models import RoutablePageTest
+from wagtail.tests.routablepage.models import RoutablePageTest, RoutablePageWithoutIndexRouteTest
 from wagtail.wagtailcore.models import Page, Site
 
 
@@ -91,6 +93,16 @@ class TestRoutablePage(TestCase):
 
         self.assertContains(response, "MAIN VIEW")
 
+    def test_get_routable_page_without_index_route(self):
+        page = self.home_page.add_child(
+            instance=RoutablePageWithoutIndexRouteTest(
+                title="Routable Page without index",
+                live=True
+            )
+        )
+        response = self.client.get(page.url)
+        self.assertContains(response, "DEFAULT PAGE TEMPLATE")
+
     def test_get_archive_by_year_view(self):
         response = self.client.get(self.routable_page.url + 'archive/year/2014/')
 
@@ -110,6 +122,25 @@ class TestRoutablePage(TestCase):
         response = self.client.get(self.routable_page.url + 'external-no-arg/')
 
         self.assertContains(response, "EXTERNAL VIEW: ARG NOT SET")
+
+    def test_routable_page_can_have_instance_bound_descriptors(self):
+        # This descriptor pretends that it does not exist in the class, hence
+        # it raises an AttributeError when class bound. This is, for instance,
+        # the behavior of django's FileFields.
+        class InstanceDescriptor(object):
+            def __get__(self, instance, cls=None):
+                if instance is None:
+                    raise AttributeError
+                return 'value'
+
+            def __set__(self, instance, value):
+                raise AttributeError
+
+        try:
+            RoutablePageTest.descriptor = InstanceDescriptor()
+            RoutablePageTest.get_subpage_urls()
+        finally:
+            del RoutablePageTest.descriptor
 
 
 class TestRoutablePageTemplateTag(TestCase):

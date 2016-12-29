@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Wagtail\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-03-09 13:55+0000\n"
-"PO-Revision-Date: 2016-03-01 22:44+0000\n"
+"POT-Creation-Date: 2016-12-06 22:44+0000\n"
+"PO-Revision-Date: 2016-10-05 19:19+0000\n"
 "Last-Translator: Dan Braghis\n"
 "Language-Team: Romanian (http://www.transifex.com/torchbox/wagtail/language/"
 "ro/)\n"
@@ -49,6 +49,15 @@ msgstr "Acest fișier este prea mare (%%s). Mărime maximă: %s."
 #, python-format
 msgid "This file is too big. Maximum filesize %s."
 msgstr "Acest fișier este prea mare. Mărime maximă: %s."
+
+msgid "Full width"
+msgstr "Lățime maximă"
+
+msgid "Left-aligned"
+msgstr "Aliniat la stânga"
+
+msgid "Right-aligned"
+msgstr "Aliniat la dreapta"
 
 msgid "Filter"
 msgstr "Filtrează"
@@ -127,12 +136,6 @@ msgstr "Etichete populare"
 
 msgid "Uploading..."
 msgstr "În curs de încărcare..."
-
-msgid "Server Error"
-msgstr "Eroare de server"
-
-msgid "Report this error to your webmaster with the following information:"
-msgstr "Raportează această eroare webmasterului cu următoarele informații:"
 
 #, python-format
 msgid ""
@@ -244,16 +247,16 @@ msgstr ""
 
 #, python-format
 msgid ""
-"You've not uploaded any images in this collection. Why not <a href="
-"\"%(wagtailimages_add_image_url)s\">add one now</a>?"
+"You haven't uploaded any images in this collection. Why not <a href="
+"\"%(wagtailimages_add_image_url)s\">upload one now</a>?"
 msgstr ""
 "Nu ați încărcat nici o imagine în această colecție. De să nu <a href="
 "\"%(wagtailimages_add_image_url)s\">adăugați una</a>?"
 
 #, python-format
 msgid ""
-"You've not uploaded any images. Why not <a href="
-"\"%(wagtailimages_add_image_url)s\">add one now</a>?"
+"You haven't uploaded any images. Why not <a href="
+"\"%(wagtailimages_add_image_url)s\">upload one now</a>?"
 msgstr ""
 "Nu ați încărcat nici o imagine. De să nu <a href="
 "\"%(wagtailimages_add_image_url)s\">adăugați una</a>?"
@@ -324,6 +327,12 @@ msgstr ""
 
 msgid "Sorry, upload failed."
 msgstr "Încărcarea a eșuat."
+
+msgid "Server Error"
+msgstr "Eroare de server"
+
+msgid "Report this error to your webmaster with the following information:"
+msgstr "Raportează această eroare webmasterului cu următoarele informații:"
 
 msgid "Image updated."
 msgstr "Imaginea a fost actualizată."

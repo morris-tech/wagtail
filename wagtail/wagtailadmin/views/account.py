@@ -1,3 +1,5 @@
+from __future__ import absolute_import, unicode_literals
+
 from functools import wraps
 
 from django.conf import settings
@@ -11,6 +13,7 @@ from django.utils.translation import ugettext as _
 from django.views.decorators.cache import never_cache
 from django.views.decorators.debug import sensitive_post_parameters
 
+from wagtail.utils.compat import user_is_authenticated
 from wagtail.wagtailadmin import forms
 from wagtail.wagtailcore.models import UserPagePermissionsProxy
 from wagtail.wagtailusers.forms import NotificationPreferencesForm
@@ -48,7 +51,7 @@ def change_password(request):
     can_change_password = request.user.has_usable_password()
 
     if can_change_password:
-        if request.POST:
+        if request.method == 'POST':
             form = PasswordChangeForm(request.user, request.POST)
 
             if form.is_valid():
@@ -76,6 +79,7 @@ def _wrap_password_reset_view(view_func):
         return view_func(*args, **kwargs)
     return wrapper
 
+
 password_reset = _wrap_password_reset_view(auth_views.password_reset)
 password_reset_done = _wrap_password_reset_view(auth_views.password_reset_done)
 password_reset_confirm = _wrap_password_reset_view(auth_views.password_reset_confirm)
@@ -83,7 +87,7 @@ password_reset_complete = _wrap_password_reset_view(auth_views.password_reset_co
 
 
 def notification_preferences(request):
-    if request.POST:
+    if request.method == 'POST':
         form = NotificationPreferencesForm(request.POST, instance=UserProfile.get_for_user(request.user))
 
         if form.is_valid():
@@ -106,7 +110,7 @@ def notification_preferences(request):
 @sensitive_post_parameters()
 @never_cache
 def login(request):
-    if request.user.is_authenticated() and request.user.has_perm('wagtailadmin.access_admin'):
+    if user_is_authenticated(request.user) and request.user.has_perm('wagtailadmin.access_admin'):
         return redirect('wagtailadmin_home')
     else:
         from django.contrib.auth import get_user_model
@@ -124,6 +128,7 @@ def login(request):
 def logout(request):
     response = auth_views.logout(request, next_page='wagtailadmin_login')
 
+    messages.success(request, _('You have been successfully logged out.'))
     # By default, logging out will generate a fresh sessionid cookie. We want to use the
     # absence of sessionid as an indication that front-end pages are being viewed by a
     # non-logged-in user and are therefore cacheable, so we forcibly delete the cookie here.

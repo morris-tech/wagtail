@@ -1,4 +1,6 @@
 
+from __future__ import absolute_import, unicode_literals
+
 from django.db.models.lookups import Lookup
 from django.db.models.query import QuerySet
 from django.db.models.sql.where import SubqueryConstraint, WhereNode
@@ -102,6 +104,7 @@ class BaseSearchResults(object):
         self.stop = None
         self._results_cache = None
         self._count_cache = None
+        self._score_field = None
 
     def _set_limits(self, start=None, stop=None):
         if stop is not None:
@@ -176,13 +179,22 @@ class BaseSearchResults(object):
             data[-1] = "...(remaining elements truncated)..."
         return '<SearchResults %r>' % data
 
+    def annotate_score(self, field_name):
+        clone = self._clone()
+        clone._score_field = field_name
+        return clone
 
-class BaseSearch(object):
+
+class BaseSearchBackend(object):
     query_class = None
     results_class = None
+    rebuilder_class = None
 
     def __init__(self, params):
         pass
+
+    def get_index_for_model(self, model):
+        return None
 
     def get_rebuilder(self):
         return None
@@ -222,6 +234,17 @@ class BaseSearch(object):
         # Check that theres still a query string after the clean up
         if query_string == "":
             return []
+
+        # Only fields that are indexed as a SearchField can be passed in fields
+        if fields:
+            allowed_fields = {field.field_name for field in model.get_searchable_search_fields()}
+
+            for field_name in fields:
+                if field_name not in allowed_fields:
+                    raise FieldError(
+                        'Cannot search with field "' + field_name + '". Please add index.SearchField(\'' +
+                        field_name + '\') to ' + model.__name__ + '.search_fields.'
+                    )
 
         # Apply filters to queryset
         if filters:

@@ -1,6 +1,8 @@
+from __future__ import absolute_import, unicode_literals
+
 from django.core.exceptions import ValidationError
-from django.test import TestCase
 from django.http.request import HttpRequest
+from django.test import TestCase, override_settings
 
 from wagtail.wagtailcore.models import Page, Site
 
@@ -30,6 +32,33 @@ class TestSiteUrl(TestCase):
         self.assertEqual(site.root_url, 'http://example.com:8000')
 
 
+class TestSiteNameDisplay(TestCase):
+    def test_site_name_not_default(self):
+        site = Site(hostname='example.com', port=80, site_name='example dot com', is_default_site=False)
+        self.assertEqual(site.__str__(), 'example dot com')
+
+    def test_site_name_default(self):
+        site = Site(hostname='example.com', port=80, site_name='example dot com', is_default_site=True)
+        self.assertEqual(site.__str__(), 'example dot com [default]')
+
+    def test_no_site_name_not_default_port_80(self):
+        site = Site(hostname='example.com', port=80, is_default_site=False)
+        self.assertEqual(site.__str__(), 'example.com')
+
+    def test_no_site_name_default_port_80(self):
+        site = Site(hostname='example.com', port=80, is_default_site=True)
+        self.assertEqual(site.__str__(), 'example.com [default]')
+
+    def test_no_site_name_not_default_port_n(self):
+        site = Site(hostname='example.com', port=8080, is_default_site=False)
+        self.assertEqual(site.__str__(), 'example.com:8080')
+
+    def test_no_site_name_default_port_n(self):
+        site = Site(hostname='example.com', port=8080, is_default_site=True)
+        self.assertEqual(site.__str__(), 'example.com:8080 [default]')
+
+
+@override_settings(ALLOWED_HOSTS=['example.com', 'unknown.com'])
 class TestFindSiteForRequest(TestCase):
     def setUp(self):
         self.default_site = Site.objects.get()

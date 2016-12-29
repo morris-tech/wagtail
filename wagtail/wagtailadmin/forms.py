@@ -1,4 +1,4 @@
-from __future__ import unicode_literals
+from __future__ import absolute_import, unicode_literals
 
 import copy
 from itertools import groupby
@@ -13,13 +13,16 @@ from django.db import models, transaction
 from django.forms.widgets import TextInput
 from django.template.loader import render_to_string
 from django.utils import timezone
+from django.utils.six import with_metaclass
 from django.utils.translation import ugettext as _
 from django.utils.translation import ugettext_lazy, ungettext
 from modelcluster.forms import ClusterForm, ClusterFormMetaclass
 from taggit.managers import TaggableManager
 
 from wagtail.wagtailadmin import widgets
-from wagtail.wagtailcore.models import Collection, GroupCollectionPermission, Page
+from wagtail.wagtailcore.models import (
+    Collection, GroupCollectionPermission, Page, PageViewRestriction
+)
 
 
 class URLOrAbsolutePathValidator(validators.URLValidator):
@@ -50,23 +53,15 @@ class SearchForm(forms.Form):
         super(SearchForm, self).__init__(*args, **kwargs)
         self.fields['q'].widget.attrs = {'placeholder': placeholder}
 
-    q = forms.CharField(label=_("Search term"), widget=forms.TextInput())
+    q = forms.CharField(label=ugettext_lazy("Search term"), widget=forms.TextInput())
 
 
 class ExternalLinkChooserForm(forms.Form):
     url = URLOrAbsolutePathField(required=True, label=ugettext_lazy("URL"))
-
-
-class ExternalLinkChooserWithLinkTextForm(forms.Form):
-    url = URLOrAbsolutePathField(required=True, label=ugettext_lazy("URL"))
-    link_text = forms.CharField(required=True)
+    link_text = forms.CharField(required=False)
 
 
 class EmailLinkChooserForm(forms.Form):
-    email_address = forms.EmailField(required=True)
-
-
-class EmailLinkChooserWithLinkTextForm(forms.Form):
     email_address = forms.EmailField(required=True)
     link_text = forms.CharField(required=False)
 
@@ -186,21 +181,32 @@ class CopyForm(forms.Form):
         return cleaned_data
 
 
-class PageViewRestrictionForm(forms.Form):
-    restriction_type = forms.ChoiceField(label="Visibility", choices=[
-        ('none', ugettext_lazy("Public")),
-        ('password', ugettext_lazy("Private, accessible with the following password")),
-    ], widget=forms.RadioSelect)
-    password = forms.CharField(required=False)
+class PageViewRestrictionForm(forms.ModelForm):
+    restriction_type = forms.ChoiceField(
+        label=ugettext_lazy("Visibility"), choices=PageViewRestriction.RESTRICTION_CHOICES,
+        widget=forms.RadioSelect)
 
-    def clean(self):
-        cleaned_data = super(PageViewRestrictionForm, self).clean()
+    def __init__(self, *args, **kwargs):
+        super(PageViewRestrictionForm, self).__init__(*args, **kwargs)
 
-        if cleaned_data.get('restriction_type') == 'password' and not cleaned_data.get('password'):
-            self._errors["password"] = self.error_class([_('This field is required.')])
-            del cleaned_data['password']
+        self.fields['groups'].widget = forms.CheckboxSelectMultiple()
+        self.fields['groups'].queryset = Group.objects.all()
 
-        return cleaned_data
+    def clean_password(self):
+        password = self.cleaned_data.get('password')
+        if self.cleaned_data.get('restriction_type') == PageViewRestriction.PASSWORD and not password:
+            raise forms.ValidationError(_("This field is required."), code='invalid')
+        return password
+
+    def clean_groups(self):
+        groups = self.cleaned_data.get('groups')
+        if self.cleaned_data.get('restriction_type') == PageViewRestriction.GROUPS and not groups:
+            raise forms.ValidationError(_("Please select at least one group."), code='invalid')
+        return groups
+
+    class Meta:
+        model = PageViewRestriction
+        fields = ('restriction_type', 'password', 'groups')
 
 
 # Form field properties to override whenever we encounter a model field
@@ -262,7 +268,16 @@ class WagtailAdminModelFormMetaclass(ClusterFormMetaclass):
         new_class = super(WagtailAdminModelFormMetaclass, cls).__new__(cls, name, bases, attrs)
         return new_class
 
-WagtailAdminModelForm = WagtailAdminModelFormMetaclass(str('WagtailAdminModelForm'), (ClusterForm,), {})
+
+class WagtailAdminModelForm(with_metaclass(WagtailAdminModelFormMetaclass, ClusterForm)):
+    @property
+    def media(self):
+        # Include media from formsets forms. This allow StreamField in InlinePanel for example.
+        media = super(WagtailAdminModelForm, self).media
+        for formset in self.formsets.values():
+            media += formset.media
+        return media
+
 
 # Now, any model forms built off WagtailAdminModelForm instead of ModelForm should pick up
 # the nice form fields defined in FORM_FIELD_OVERRIDES.
@@ -287,6 +302,7 @@ class WagtailAdminPageForm(WagtailAdminModelForm):
             return self.cleaned_data['seo_title'].strip()
 
     def clean(self):
+
         cleaned_data = super(WagtailAdminPageForm, self).clean()
         if 'slug' in self.cleaned_data:
             if not Page._slug_is_available(
@@ -418,7 +434,9 @@ class BaseGroupCollectionMemberPermissionFormSet(forms.BaseFormSet):
         collections = [
             form.cleaned_data['collection']
             for form in self.forms
-            if form not in self.deleted_forms
+            # need to check for presence of 'collection' in cleaned_data,
+            # because a completely blank form passes validation
+            if form not in self.deleted_forms and 'collection' in form.cleaned_data
         ]
         if len(set(collections)) != len(collections):
             # collections list contains duplicates
@@ -435,7 +453,10 @@ class BaseGroupCollectionMemberPermissionFormSet(forms.BaseFormSet):
             )
 
         # get a set of (collection, permission) tuples for all ticked permissions
-        forms_to_save = [form for form in self.forms if form not in self.deleted_forms]
+        forms_to_save = [
+            form for form in self.forms
+            if form not in self.deleted_forms and 'collection' in form.cleaned_data
+        ]
 
         final_permission_records = set()
         for form in forms_to_save:
