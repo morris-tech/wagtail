@@ -2,7 +2,7 @@ from __future__ import absolute_import, unicode_literals
 
 from django.conf.urls import url
 
-from wagtail.wagtailadmin.views import collections
+from wagtail.wagtailadmin.views import collection_privacy, collections
 
 urlpatterns = [
     url(r'^$', collections.Index.as_view(), name='index'),
@@ -13,6 +13,7 @@ urlpatterns = [
     url(r'^(\d+)/move/(\d+)/$', collections.Move.as_view(), name='move'),
     url(r'^(\d+)/move/(\d+)/confirm/$', collections.MoveConfirm.as_view(), name='move_confirm'),
     url(r'^(\d+)/delete/$', collections.Delete.as_view(), name='delete'),
+    url(r'^(\d+)/privacy/$', collection_privacy.set_privacy, name='set_privacy'),
     url(r'^choose-collection/$', collections.Index.as_view(), name='choose_collection'),
     url(r'^choose-collection/(\d+)/$', collections.Index.as_view(), name='choose_collection_child'),
     url(r'^choose-collection-search/$', collections.Index.as_view(), name='choose_collection_search'),

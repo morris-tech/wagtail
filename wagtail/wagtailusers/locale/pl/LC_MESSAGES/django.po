@@ -4,15 +4,16 @@
 #
 # Translators:
 # utek <mail@utek.pl>, 2014
+# Miłosz Miśkiewicz, 2017
 # Miłosz Miśkiewicz, 2016
 # utek <mail@utek.pl>, 2014
 msgid ""
 msgstr ""
 "Project-Id-Version: Wagtail\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-02-06 12:33+0000\n"
-"PO-Revision-Date: 2017-02-06 12:40+0000\n"
-"Last-Translator: Matt Westcott <matthew@torchbox.com>\n"
+"POT-Creation-Date: 2017-08-10 16:05+0000\n"
+"PO-Revision-Date: 2017-08-17 07:10+0000\n"
+"Last-Translator: Miłosz Miśkiewicz\n"
 "Language-Team: Polish (http://www.transifex.com/torchbox/wagtail/language/"
 "pl/)\n"
 "MIME-Version: 1.0\n"
@@ -20,7 +21,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Language: pl\n"
 "Plural-Forms: nplurals=4; plural=(n==1 ? 0 : (n%10>=2 && n%10<=4) && (n"
-"%100<12 || n%100>=14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && n"
+"%100<12 || n%100>14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && n"
 "%10<=9) || (n%100>=12 && n%100<=14) ? 2 : 3);\n"
 
 msgid "Required. 30 characters or fewer. Letters, digits and @/./+/-/_ only."
@@ -36,13 +37,14 @@ msgstr "Użytkownik o tej nazwie już istnieje."
 msgid "The two password fields didn't match."
 msgstr "Hasła się nie zgadzają."
 
-msgid "Administrator"
-msgstr "Administrator"
+msgid "Email"
+msgstr "Email"
 
-msgid "Administrators have full access to manage any object or setting."
-msgstr ""
-"Administratorzy mają pełne uprawnienia do zarządzania każdym obiektem lub "
-"ustawieniem."
+msgid "First Name"
+msgstr "Pierwsze imię"
+
+msgid "Last Name"
+msgstr "Nazwisko"
 
 msgid "Password"
 msgstr "Hasło"
@@ -56,14 +58,13 @@ msgstr "Potwierdzenie hasła"
 msgid "Enter the same password as above, for verification."
 msgstr "W celu potwierdzenie wpisz to samo hasło co powyżej."
 
-msgid "Email"
-msgstr "Email"
+msgid "Administrator"
+msgstr "Administrator"
 
-msgid "First Name"
-msgstr "Pierwsze imię"
-
-msgid "Last Name"
-msgstr "Nazwisko"
+msgid "Administrators have full access to manage any object or setting."
+msgstr ""
+"Administratorzy mają pełne uprawnienia do zarządzania każdym obiektem lub "
+"ustawieniem."
 
 msgid "A group with that name already exists."
 msgstr "Grupa o tej nazwie już istnieje."
@@ -89,11 +90,42 @@ msgstr "odrzucone notyfikacje"
 msgid "Receive notification when your page edit is rejected"
 msgstr "Otrzymuj powiadomienie gdy twoja zmiana strony została odrzucona"
 
+msgid "preferred language"
+msgstr "preferowany język"
+
+msgid "Select language for the admin"
+msgstr "Wybierz język dla administratora"
+
 msgid "user profile"
 msgstr "profil użytkownika"
 
 msgid "Delete group"
 msgstr "Usuń grupę"
+
+#, python-format
+msgid ""
+"\n"
+"                The group '%(group_name)s' has <strong>%(group_user_count)s</"
+"strong> member.\n"
+"            "
+msgid_plural ""
+"\n"
+"                The group '%(group_name)s' has <strong>%(group_user_count)s</"
+"strong> members.\n"
+"            "
+msgstr[0] ""
+"\n"
+" Grupa '%(group_name)s' ma %(group_user_count)s członka."
+msgstr[1] ""
+"\n"
+" Grupa '%(group_name)s' ma %(group_user_count)s członków."
+msgstr[2] ""
+"\n"
+" Grupa '%(group_name)s' ma %(group_user_count)s członków."
+msgstr[3] ""
+"\n"
+"                Grupa '%(group_name)s' ma <strong>%(group_user_count)s</"
+"strong> członków."
 
 msgid ""
 "Deleting this group will revoke this group's permissions from all member "

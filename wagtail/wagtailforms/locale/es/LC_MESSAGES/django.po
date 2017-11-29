@@ -6,16 +6,17 @@
 # Daniel Chimeno <daniel@chimeno.me>, 2016
 # Daniel Chimeno <daniel@chimeno.me>, 2015
 # Joaquín Tita <carpincho@gmail.com>, 2014
-# Yusuf (Josè) Luis <alagunajs@gmail.com>, 2015
+# José Luis <alagunajs@gmail.com>, 2015
+# José Luis <alagunajs@gmail.com>, 2017
 # Mauricio Baeza <python@amigos.email>, 2014
-# Yusuf (Josè) Luis <alagunajs@gmail.com>, 2016-2017
+# José Luis <alagunajs@gmail.com>, 2016-2017
 msgid ""
 msgstr ""
 "Project-Id-Version: Wagtail\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-02-06 12:33+0000\n"
-"PO-Revision-Date: 2017-02-13 21:46+0000\n"
-"Last-Translator: Yusuf (Josè) Luis <alagunajs@gmail.com>\n"
+"POT-Creation-Date: 2017-08-10 16:05+0000\n"
+"PO-Revision-Date: 2017-08-11 08:58+0000\n"
+"Last-Translator: José Luis <alagunajs@gmail.com>\n"
 "Language-Team: Spanish (http://www.transifex.com/torchbox/wagtail/language/"
 "es/)\n"
 "MIME-Version: 1.0\n"
@@ -26,6 +27,12 @@ msgstr ""
 
 msgid "{} submissions"
 msgstr "{} presentaciones"
+
+msgid "Date from"
+msgstr "Fecha de"
+
+msgid "Date to"
+msgstr "Fecha a"
 
 #, python-format
 msgid "There is another field with the label %s, please change one of them."
@@ -54,6 +61,9 @@ msgstr "Casillas de verificación"
 
 msgid "Drop down"
 msgstr "Lista desplegable"
+
+msgid "Multiple select"
+msgstr "Selección múltiple"
 
 msgid "Radio buttons"
 msgstr "Botón de opción"
@@ -185,6 +195,9 @@ msgstr "Título"
 
 msgid "Origin"
 msgstr "Origen"
+
+msgid "Delete selected submissions"
+msgstr "Eliminar las presentaciones seleccionadas"
 
 msgid "No form pages have been created."
 msgstr "No se han creado páginas de formularios."

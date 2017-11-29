@@ -1,3 +1,5 @@
+# coding: utf-8
+
 from __future__ import absolute_import, unicode_literals
 
 import time
@@ -55,6 +57,7 @@ class BackendTests(WagtailTestUtils):
         testa = models.SearchTest()
         testa.title = "Hello World"
         testa.save()
+        testa.subobjects.create(name='A subobject')
         self.backend.add(testa)
         self.testa = testa
 
@@ -128,10 +131,30 @@ class BackendTests(WagtailTestUtils):
         results = self.backend.search(None, models.SearchTest, filters=dict(live=True))
         self.assertEqual(set(results), {self.testb, self.testc.searchtest_ptr})
 
-    def test_filters_with_in_lookup(self):
+    def test_filters_in_subquery(self):
         live_page_titles = models.SearchTest.objects.filter(live=True).values_list('title', flat=True)
         results = self.backend.search(None, models.SearchTest, filters=dict(title__in=live_page_titles))
         self.assertEqual(set(results), {self.testb, self.testc.searchtest_ptr})
+
+    def test_filters_in_list(self):
+        live_page_titles = ['Hello']
+        results = self.backend.search(None, models.SearchTest,
+                                      filters=dict(title__in=live_page_titles))
+        self.assertEqual(set(results), {self.testb, self.testc.searchtest_ptr})
+
+    def test_filters_in_iterable(self):
+        class CustomIterable:
+            def __init__(self, data):
+                self.data = data
+
+            def __iter__(self):
+                for item in self.data:
+                    yield item
+
+        results = self.backend.search(
+            None, models.SearchTest,
+            filters=dict(title__in=CustomIterable(['World'])))
+        self.assertEqual(set(results), {self.testd.searchtest_ptr})
 
     def test_single_result(self):
         result = self.backend.search(None, models.SearchTest)[0]
@@ -152,6 +175,54 @@ class BackendTests(WagtailTestUtils):
     def test_child_model_with_id_filter(self):
         results = self.backend.search("World", models.SearchTestChild.objects.filter(id=self.testd.id))
         self.assertEqual(set(results), {self.testd})
+
+    def test_related_objects_search(self):
+        results = self.backend.search("A subobject", models.SearchTest)
+        self.assertEqual(set(results), {self.testa})
+
+    def test_boost(self):
+        results = list(self.backend.search('Hello', models.SearchTest))
+        # The `content` field has more boost, so the object containing “Hello”
+        # should be before the ones having it in the title,
+        # despite the insertion order.
+        self.assertEqual(results[0], self.testc.searchtest_ptr)
+        self.assertSetEqual(set(results[1:]), {self.testa, self.testb})
+
+    def test_order_by_relevance(self):
+        sorted_results = list(self.backend.search('Hello', models.SearchTest,
+                                                  order_by_relevance=True))
+        self.assertEqual(sorted_results[0], self.testc.searchtest_ptr)
+        self.assertSetEqual(set(sorted_results[1:]), {self.testa, self.testb})
+
+        unsorted_results = list(self.backend.search('Hello', models.SearchTest,
+                                                    order_by_relevance=False))
+        self.assertSetEqual(
+            set(unsorted_results),
+            {self.testa, self.testb, self.testc.searchtest_ptr})
+
+    def test_same_rank_pages(self):
+        """
+        Checks that results with a same ranking cannot be found multiple times
+        across pages (see issue #3729).
+        """
+        same_rank_objects = set()
+        try:
+            for i in range(10):
+                obj = models.SearchTest.objects.create(title='Rank %s' % i)
+                self.backend.add(obj)
+                same_rank_objects.add(obj)
+            self.refresh_index()
+
+            results = self.backend.search('Rank', models.SearchTest)
+            results_across_pages = set()
+            for i, obj in enumerate(same_rank_objects):
+                results_across_pages.add(results[i:i + 1][0])
+            self.assertSetEqual(results_across_pages, same_rank_objects)
+        finally:
+            for obj in same_rank_objects:
+                self.backend.delete(obj)
+                obj.delete()
+            self.refresh_index()
 
     def test_delete(self):
         # Delete one of the objects
