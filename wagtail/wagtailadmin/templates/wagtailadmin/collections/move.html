@@ -10,6 +10,6 @@
     <div class="listing full-width nice-padding">
         {% include 'wagtailadmin/collections/listing/_list_move.html' %}
         {% url 'wagtailadmin_collections:move' parent_collection.pk as pagination_base_url %}
-        {% paginate collections base_url=pagination_base_url %}
+        {% paginate page_obj base_url=pagination_base_url %}
     </div>
 {% endblock %}

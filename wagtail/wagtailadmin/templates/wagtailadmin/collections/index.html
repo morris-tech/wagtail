@@ -15,5 +15,5 @@
     </div>
 
     {% url 'wagtailadmin_collections:parent_index' parent_collection.pk as pagination_base_url %}
-    {% paginate collections base_url=pagination_base_url %}
+    {% paginate page_obj base_url=pagination_base_url %}
 {% endblock %}
