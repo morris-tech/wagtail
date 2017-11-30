@@ -65,21 +65,6 @@ class IndexView(PermissionCheckedMixin, TemplateResponseMixin, BaseListView):
             self.permission_policy is None or
             self.permission_policy.user_has_permission(self.request.user, 'add')
         )
-
-        # TODO: Consolidate with above code
-        object_list = self.get_queryset()
-
-        context = {
-            'view': self,
-            'object_list': object_list,
-            'can_add': (
-                self.permission_policy is None or
-                self.permission_policy.user_has_permission(self.request.user, 'add')
-            ),
-        }
-        if self.context_object_name:
-            context[self.context_object_name] = object_list
-
         return context
 
 

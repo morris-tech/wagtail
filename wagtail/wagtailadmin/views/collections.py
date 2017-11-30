@@ -44,6 +44,9 @@ class Index(IndexView):
     add_item_label = ugettext_lazy("Add a collection")
     header_icon = 'folder-open-1'
 
+    def get_paginate_by(self, queryset):
+        return 50
+
     def __init__(self):
         super(Index, self).__init__()
         self.parent_collection = None
@@ -68,14 +71,10 @@ class Index(IndexView):
 
             return self.parent_collection.get_children()
 
-    def get_context(self):
-        context = super(Index, self).get_context()
-        # Turn the queryset of collections into a Paginator
-        paginator, collections = paginate(self.request, context[self.context_object_name], per_page=50)
+    def get_context_data(self):
+        context = super(Index, self).get_context_data(object_list=self.get_queryset())
 
         context.update({
-            'collections': collections,
-            'paginator': paginator,
             'search_form': SearchForm(),
         })
 
@@ -88,10 +87,12 @@ class Index(IndexView):
 
         return context
 
-    def get(self, request, root_id=None):
+    def get(self, request, root_id=None, *args, **kwargs):
+        # TODO: Do we need to call super()?
+        self.object_list = self.get_queryset()
         if root_id:
             self.parent_collection = get_object_or_404(Collection, pk=root_id)
-        context = self.get_context()
+        context = self.get_context_data()
 
         # All requests originating from the collection chooser will a `modal` query param.
         if request.GET.get('modal'):
